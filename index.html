@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Jogo da Nave</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="gameBox">
+      <video id="fundoVideo" autoplay muted loop>
+        <source src="video.mp4" type="video/mp4" />
+        Seu navegador não suporta vídeo.
+      </video>
+      <img id="nave" src="nave.gif" alt="Nave" />
+    </div>
+    <div id="placar">Pontuação: 0</div>
+
+    <div id="ranking">
+      <h3>Top 10</h3>
+      <ul id="rankingList"></ul>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
