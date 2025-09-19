@@ -104,25 +104,80 @@ function moverNave() {
 }
 moverNave();
 
-function atualizarRanking() {
-  let scores = JSON.parse(localStorage.getItem("scores")) || [];
-  let rankingList = document.getElementById("rankingList");
+async function atualizarRanking() {
+  try {
+    const scores = await buscarHiscoresAPI();
+    let rankingList = document.getElementById("rankingList");
 
-  if (rankingList) {
-    rankingList.innerHTML = "";
+    if (rankingList) {
+      rankingList.innerHTML = "";
 
-    scores.forEach((s, i) => {
-      let li = document.createElement("li");
-      li.textContent = `${i + 1}. ${s.nome} - ${s.pontos}`;
-      rankingList.appendChild(li);
-    });
+      scores.slice(0, 10).forEach((s, i) => {
+        let li = document.createElement("li");
+        li.textContent = `${i + 1}. ${s.nome} - ${s.pontos}`;
+        rankingList.appendChild(li);
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar ranking:', error);
   }
 }
 
 // --------------------
-// SALVAR RECORD NO LOCALSTORAGE
+// FUNÇÕES DA API DE HISCORES
 // --------------------
-function salvarRecord(nome, pontos) {
+const API_BASE_URL = 'https://nostromo-shutemup-backend.vercel.app';
+
+async function salvarHiscoreAPI(nome, pontos) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/hiscores`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nome: nome,
+        pontos: pontos,
+        data: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('Hiscore salvo com sucesso:', result);
+    return result;
+  } catch (error) {
+    console.error('Erro ao salvar hiscore:', error);
+    // Fallback para localStorage se a API falhar
+    salvarRecordLocal(nome, pontos);
+    throw error;
+  }
+}
+
+async function buscarHiscoresAPI() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/hiscores`);
+    
+    if (!response.ok) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+
+    const hiscores = await response.json();
+    return hiscores;
+  } catch (error) {
+    console.error('Erro ao buscar hiscores:', error);
+    // Fallback para localStorage se a API falhar
+    return JSON.parse(localStorage.getItem("scores")) || [];
+  }
+}
+
+// --------------------
+// SALVAR RECORD NO LOCALSTORAGE (FALLBACK)
+// --------------------
+function salvarRecordLocal(nome, pontos) {
   let scores = JSON.parse(localStorage.getItem("scores")) || [];
   scores.push({ nome, pontos });
   scores.sort((a, b) => b.pontos - a.pontos);
@@ -247,13 +302,27 @@ function mostrarModalRecord() {
   });
 
   // Eventos dos botões
-  btnSalvar.addEventListener("click", () => {
+  btnSalvar.addEventListener("click", async () => {
     const nome = input.value.trim();
     if (nome.length === 3) {
-      salvarRecord(nome, pontuacao);
-      document.body.removeChild(overlay);
-      atualizarRanking();
-      location.reload();
+      try {
+        // Desabilita o botão para evitar cliques múltiplos
+        btnSalvar.disabled = true;
+        btnSalvar.textContent = "SALVANDO...";
+        
+        // Tenta salvar na API primeiro
+        await salvarHiscoreAPI(nome, pontuacao);
+        
+        document.body.removeChild(overlay);
+        await atualizarRanking();
+        location.reload();
+      } catch (error) {
+        // Se falhar, mostra mensagem mas continua (já foi salvo no localStorage como fallback)
+        console.error('Erro ao salvar na API, mas foi salvo localmente:', error);
+        document.body.removeChild(overlay);
+        await atualizarRanking();
+        location.reload();
+      }
     } else {
       input.style.borderColor = "#ff3939";
       input.style.animation = "shake 0.5s";
@@ -347,6 +416,9 @@ function mostrarTelaGameOver() {
 
 // carrega ranking ao abrir jogo
 atualizarRanking();
+
+// Atualiza o ranking a cada 30 segundos para pegar novos hiscores
+setInterval(atualizarRanking, 30000);
 
 // --------------------
 // FUNÇÃO PLACAR
