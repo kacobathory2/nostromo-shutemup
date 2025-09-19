@@ -134,23 +134,25 @@ async function salvarHiscoreAPI(nome, pontos) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
-        nome: nome,
+        nome: nome.toUpperCase(),
         pontos: pontos,
         data: new Date().toISOString()
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('Hiscore salvo com sucesso:', result);
+    console.log('Hiscore salvo com sucesso na API:', result);
     return result;
   } catch (error) {
-    console.error('Erro ao salvar hiscore:', error);
+    console.error('Erro ao salvar hiscore na API:', error);
     // Fallback para localStorage se a API falhar
     salvarRecordLocal(nome, pontos);
     throw error;
@@ -159,18 +161,33 @@ async function salvarHiscoreAPI(nome, pontos) {
 
 async function buscarHiscoresAPI() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/hiscores`);
+    const response = await fetch(`${API_BASE_URL}/api/hiscores`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
     
     if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
     }
 
     const hiscores = await response.json();
-    return hiscores;
+    console.log('Hiscores carregados da API:', hiscores);
+    
+    // Garante que retorna um array ordenado por pontuação
+    if (Array.isArray(hiscores)) {
+      return hiscores.sort((a, b) => b.pontos - a.pontos).slice(0, 10);
+    }
+    
+    return [];
   } catch (error) {
-    console.error('Erro ao buscar hiscores:', error);
+    console.error('Erro ao buscar hiscores da API:', error);
     // Fallback para localStorage se a API falhar
-    return JSON.parse(localStorage.getItem("scores")) || [];
+    const localScores = JSON.parse(localStorage.getItem("scores")) || [];
+    console.log('Usando hiscores locais como fallback:', localScores);
+    return localScores;
   }
 }
 
