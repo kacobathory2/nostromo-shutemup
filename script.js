@@ -126,21 +126,31 @@ async function atualizarRanking() {
 // --------------------
 // FUNÇÕES DA API DE HISCORES
 // --------------------
-const API_BASE_URL = 'https://nostromo-shutemup-backend.vercel.app';
+const API_BASE_URL = 'http://localhost:8080';
 
 async function salvarHiscoreAPI(nome, pontos) {
   try {
+    // Validação dos parâmetros antes de enviar
+    if (!nome || nome.trim() === '' || pontos === null || pontos === undefined || isNaN(pontos) || pontos < 0) {
+      throw new Error('Nome e pontos são obrigatórios e devem ser válidos');
+    }
+
+    const dadosParaEnviar = {
+      nome: nome.trim().toUpperCase(),
+      pontos: parseInt(pontos),
+      data: new Date().toISOString()
+    };
+
+    console.log('Enviando para API:', dadosParaEnviar);
+    console.log('Dados como JSON:', JSON.stringify(dadosParaEnviar));
+
     const response = await fetch(`${API_BASE_URL}/api/hiscores`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        nome: nome.toUpperCase(),
-        pontos: pontos,
-        data: new Date().toISOString()
-      })
+      body: JSON.stringify(dadosParaEnviar)
     });
 
     if (!response.ok) {
